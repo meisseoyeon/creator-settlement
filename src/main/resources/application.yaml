@@ -1,3 +1,46 @@
 spring:
   application:
     name: creator-settlement
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/settlement
+    username: settlement
+    password: settlement
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop      # 개발 단계: 부팅마다 스키마 재생성
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          time_zone: Asia/Seoul
+    show-sql: true
+    defer-datasource-initialization: true   # data.sql을 ddl 생성 후 실행
+
+  sql:
+    init:
+      mode: always               # data.sql 항상 실행
+
+  jackson:
+    time-zone: Asia/Seoul
+
+server:
+  port: 8080
+
+
+  # 스프링 배치 필수 설정
+  batch:
+    jdbc:
+      initialize-schema: always # 배치 실행에 필요한 메타 테이블(BATCH_JOB_INSTANCE 등)을 자동 생성
+    job:
+      enabled: ${SPRING_BATCH_JOB_ENABLED:false}
+      names: ${SPRING_BATCH_JOB_NAME:}
+
+    # 배치 파티셔너 설정
+    settlement:
+      partition:
+        min: ${SETTLEMENT_MIN:} # 값이 없으면 null
+        max: ${SETTLEMENT_MAX:}
