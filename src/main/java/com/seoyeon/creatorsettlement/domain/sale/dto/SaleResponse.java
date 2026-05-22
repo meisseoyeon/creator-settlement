@@ -1,4 +1,4 @@
-package com.seoyeon.creator_settlement.domain.sale.dto;
+package com.seoyeon.creatorsettlement.domain.sale.dto;
 
 import com.seoyeon.creatorsettlement.domain.sale.SaleRecord;
 
