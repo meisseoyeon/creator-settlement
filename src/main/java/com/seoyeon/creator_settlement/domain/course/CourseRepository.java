@@ -1,4 +1,4 @@
-package com.seoyeon.creatorsettlement.domain.course;
+package com.seoyeon.creator_settlement.domain.course;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

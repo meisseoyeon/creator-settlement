@@ -1,4 +1,4 @@
-package com.seoyeon.creatorsettlement.domain.sale.dto;
+package com.seoyeon.creator_settlement.domain.sale.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
