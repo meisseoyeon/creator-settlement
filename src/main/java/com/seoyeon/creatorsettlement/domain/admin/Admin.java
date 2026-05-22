@@ -1,4 +1,4 @@
-package com.seoyeon.creator_settlement.domain.admin;
+package com.seoyeon.creatorsettlement.domain.admin;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;

@@ -1,4 +1,4 @@
-package com.seoyeon.creator_settlement;
+package com.seoyeon.creatorsettlement;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

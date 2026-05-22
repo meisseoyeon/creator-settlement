@@ -1,12 +1,9 @@
-package com.seoyeon.creator_settlement.domain;
-import com.seoyeon.creator_settlement.domain.creator.Creator;
-import com.seoyeon.creator_settlement.domain.sale.SaleRecord;
+package com.seoyeon.creatorsettlement.domain.sale;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 @Entity
 @Table(name = "cancel_record",
