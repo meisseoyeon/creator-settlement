@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.OffsetDateTime;
 @Entity
-@Table(name = "creator")
+@Table(name = "admin")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Admin {
