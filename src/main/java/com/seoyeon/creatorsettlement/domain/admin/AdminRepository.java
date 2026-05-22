@@ -1,4 +1,4 @@
-package com.seoyeon.creator_settlement.domain.admin;
+package com.seoyeon.creatorsettlement.domain.admin;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
