@@ -30,17 +30,10 @@ spring:
 server:
   port: 8080
 
-
-  # 스프링 배치 필수 설정
-  batch:
-    jdbc:
-      initialize-schema: always # 배치 실행에 필요한 메타 테이블(BATCH_JOB_INSTANCE 등)을 자동 생성
-    job:
-      enabled: ${SPRING_BATCH_JOB_ENABLED:false}
-      names: ${SPRING_BATCH_JOB_NAME:}
-
-    # 배치 파티셔너 설정
-    settlement:
-      partition:
-        min: ${SETTLEMENT_MIN:} # 값이 없으면 null
-        max: ${SETTLEMENT_MAX:}
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  api-docs:
+    path: /v3/api-docs

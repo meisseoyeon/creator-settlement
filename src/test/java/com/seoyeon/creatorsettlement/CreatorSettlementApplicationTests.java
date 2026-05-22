@@ -1,4 +1,4 @@
-package com.seoyeon.creator_settlement;
+package com.seoyeon.creatorsettlement;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

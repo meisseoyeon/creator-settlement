@@ -1,6 +1,6 @@
-package com.seoyeon.creator_settlement.domain.course;
+package com.seoyeon.creatorsettlement.domain.course;
 
-import com.seoyeon.creator_settlement.domain.creator.Creator;
+import com.seoyeon.creatorsettlement.domain.creator.Creator;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
