@@ -1,4 +1,4 @@
-package com.seoyeon.creator_settlement.domain.creator;
+package com.seoyeon.creatorsettlement.domain.creator;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;

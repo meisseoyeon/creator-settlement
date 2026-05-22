@@ -1,13 +1,10 @@
-package com.seoyeon.creator_settlement.domain.sale;
-import com.seoyeon.creator_settlement.domain.CancelRecord;
-import com.seoyeon.creator_settlement.domain.course.Course;
-import com.seoyeon.creator_settlement.domain.creator.Creator;
+package com.seoyeon.creatorsettlement.domain.sale;
+import com.seoyeon.creatorsettlement.domain.course.Course;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
