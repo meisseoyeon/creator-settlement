@@ -1,5 +1,6 @@
 package com.seoyeon.creatorsettlement.domain.sale.dto;
 
+import com.seoyeon.creatorsettlement.domain.sale.CancelRecord;
 import com.seoyeon.creatorsettlement.domain.sale.SaleRecord;
 
 import java.time.OffsetDateTime;
@@ -17,7 +18,7 @@ public record SaleResponse(
 ) {
     public static SaleResponse from(SaleRecord s) {
         long refunded = s.getCancels().stream()
-                .mapToLong(c -> c.getRefundAmount())
+                .mapToLong(CancelRecord::getRefundAmount)
                 .sum();
         return new SaleResponse(
                 s.getId(),

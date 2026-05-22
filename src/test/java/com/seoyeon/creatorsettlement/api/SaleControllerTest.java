@@ -1,13 +1,14 @@
 package com.seoyeon.creatorsettlement.api;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;  // 필요 없으면 제거
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 
@@ -16,11 +17,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Transactional   // 각 테스트 종료 시 자동 롤백 → 시드 데이터 보존
 class SaleControllerTest {
 
     @Autowired MockMvc mvc;
-    @Autowired
-    tools.jackson.databind.ObjectMapper om;
+    @Autowired ObjectMapper om;
 
     @Test
     @DisplayName("판매 등록 → 201 Created + Location 헤더")
@@ -60,7 +61,6 @@ class SaleControllerTest {
     @Test
     @DisplayName("환불 누적이 원결제 초과 시 400")
     void registerCancel_exceedsAmount() throws Exception {
-        // sale-1 은 50,000원, 누적 60,000 환불 시도
         mvc.perform(post("/api/sales/sale-1/cancels")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
