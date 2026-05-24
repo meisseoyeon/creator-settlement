@@ -11,6 +11,7 @@ import com.seoyeon.creatorsettlement.domain.sale.SaleRecordRepository;
 import com.seoyeon.creatorsettlement.domain.settlement.Settlement;
 import com.seoyeon.creatorsettlement.domain.settlement.SettlementRepository;
 import com.seoyeon.creatorsettlement.domain.settlement.SettlementResult;
+import com.seoyeon.creatorsettlement.domain.settlement.SettlementStatus;
 import com.seoyeon.creatorsettlement.domain.settlement.dto.MonthlySettlementResponse;
 import com.seoyeon.creatorsettlement.domain.settlement.dto.SettlementResponse;
 import lombok.RequiredArgsConstructor;
@@ -18,10 +19,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 크리에이터 월별 정산을 담당한다.
- * - 조회: 결제/취소 내역으로부터 즉시 계산(영속화하지 않음)
+ * - 조회: 확정(CONFIRMED)·지급(PAID)된 달은 저장된 스냅샷을 반환(재계산 X),
+ *         미확정 달만 결제/취소 내역으로부터 즉시 계산
  * - 확정: 계산 결과를 스냅샷으로 저장하고 PENDING → CONFIRMED → PAID 로 전이
  *
  * 정산 기간 기준: 결제는 paidAt, 취소는 canceledAt 기준 (KST 월 경계).
@@ -41,6 +44,15 @@ public class CreatorSettlementService {
     @Transactional(readOnly = true)
     public MonthlySettlementResponse getMonthly(String creatorId, String month) {
         Creator creator = requireCreator(creatorId);
+
+        // 확정(CONFIRMED)·지급(PAID)된 정산은 불변이므로 재계산 없이 저장된 스냅샷을 반환
+        Optional<Settlement> finalized = settlementRepo
+                .findByCreator_IdAndSettlementMonth(creatorId, month)
+                .filter(s -> s.getStatus() != SettlementStatus.PENDING);
+        if (finalized.isPresent()) {
+            return MonthlySettlementResponse.from(finalized.get());
+        }
+
         SettlementResult result = compute(creatorId, MonthRange.of(month));
         return MonthlySettlementResponse.of(creator.getId(), creator.getName(), month, result);
     }
