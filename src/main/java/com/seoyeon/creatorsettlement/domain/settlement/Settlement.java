@@ -68,6 +68,23 @@ public class Settlement {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    /** 계산 결과를 PENDING 스냅샷으로 고정한다. */
+    public static Settlement of(Creator creator, String settlementMonth, SettlementResult r) {
+        Settlement s = new Settlement();
+        s.creator = creator;
+        s.settlementMonth = settlementMonth;
+        s.totalSalesAmount = r.totalSalesAmount();
+        s.totalRefundAmount = r.totalRefundAmount();
+        s.netSalesAmount = r.netSalesAmount();
+        s.commissionAmount = r.commissionAmount();
+        s.payoutAmount = r.payoutAmount();
+        s.salesCount = r.salesCount();
+        s.cancelCount = r.cancelCount();
+        s.commissionRate = r.commissionRate();
+        s.status = SettlementStatus.PENDING;
+        return s;
+    }
+
     @PrePersist
     void onCreate() {
         OffsetDateTime now = OffsetDateTime.now();
