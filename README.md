@@ -188,29 +188,112 @@ curl 'http://localhost:8080/api/admin/settlements?from=2025-03-01&to=2025-03-31'
 
 ---
 
-## 데이터 모델 설명
+## 데이터 모델 (DB 스키마 / ERD)
+
+### 관계도
 
 ```
-Creator 1 ── N Course 1 ── N SaleRecord 1 ── N CancelRecord
-Creator 1 ── N Settlement
-Admin / Student (참조용 마스터)
+creator ─┬─< course ─< sale_record ─< cancel_record
+         └─< settlement
+
+student ··< sale_record     (논리적 참조: student_id, FK 미적용)
+admin                       (독립 마스터, 관계 없음)
 ```
 
-| 엔티티 | 주요 컬럼 | 설명 |
+- 표기: `부모 ─< 자식` = **1 : N**, 자식 쪽 FK는 모두 **NOT NULL(부모 필수)**.
+- 모든 FK는 자식의 PK가 아닌 별도 컬럼 → **비식별(non-identifying) 관계**.
+
+### 관계 정의
+
+| 부모(1) | 자식(N) | FK 컬럼 | 카디널리티 | 비고 |
+| --- | --- | --- | --- | --- |
+| `creator` | `course` | `course.creator_id` | 1 : N | 강사 1명이 강의 N개 보유 |
+| `course` | `sale_record` | `sale_record.course_id` | 1 : N | 강의별 판매 |
+| `sale_record` | `cancel_record` | `cancel_record.sale_id` | 1 : N | 판매 1건당 환불 0..N (부분·다회 허용) |
+| `creator` | `settlement` | `settlement.creator_id` | 1 : N | 크리에이터별 월 정산. (creator_id, month) 유니크 |
+| `student` | `sale_record` | `sale_record.student_id` | (논리적) | **FK 미적용** — 결제 시점 식별자만 보관 |
+| `admin` | — | — | — | 운영자 마스터. 정산과 FK 관계 없음 |
+
+### 테이블 스키마
+
+**creator / student / admin** (마스터)
+
+| 컬럼 | 타입 | 제약 |
 | --- | --- | --- |
-| `Creator` | id, name | 크리에이터(강사) |
-| `Course` | id, creator_id, title | 강의. 크리에이터에 속함 |
-| `SaleRecord` | id, course_id, student_id, amount, paid_at | 판매 내역. ID는 클라이언트 지정 |
-| `CancelRecord` | id, sale_id, refund_amount, canceled_at | 취소(환불). 원본 판매 참조, 부분/다회 환불 허용 |
-| `Settlement` | id, creator_id, settlement_month, (금액 스냅샷들), commission_rate, status, confirmed_at, paid_at | 확정 정산 스냅샷. (creator_id, settlement_month) 유니크 |
-| `Admin`, `Student` | id, name | 운영자/수강생 마스터 |
+| `id` | VARCHAR(50) | PK |
+| `name` | VARCHAR(100) | NOT NULL |
+| `created_at` | TIMESTAMPTZ | NOT NULL |
 
-설계 메모:
-- `studentId`는 판매 시점 식별자로만 쓰여 `SaleRecord`에 문자열 컬럼으로 둠(강한 FK 미적용).
-- `Settlement`은 확정 시점의 금액을 **스냅샷**으로 저장 → 이후 환불이 추가돼도 확정된 정산 값은 불변.
-- **월별 조회 성능**: 확정(CONFIRMED)·지급(PAID)된 달은 재계산 없이 스냅샷을 반환(read-through), 미확정 달만 실시간 계산. 조회 패턴에 맞춰 복합 인덱스(`sale_record(course_id, paid_at)`, `cancel_record(sale_id, canceled_at)`) 적용.
-- 조회 성능을 위해 `paid_at`, `canceled_at`, FK 컬럼에 인덱스, 정산은 status 인덱스 + (creator, month) 유니크 제약.
-- 정산 계산(`SettlementCalculator`)은 순수 함수로 분리해 단위 테스트 용이.
+**course**
+
+| 컬럼 | 타입 | 제약 |
+| --- | --- | --- |
+| `id` | VARCHAR(50) | PK |
+| `creator_id` | VARCHAR(50) | FK → creator, NOT NULL |
+| `title` | VARCHAR(200) | NOT NULL |
+| `created_at` | TIMESTAMPTZ | NOT NULL |
+
+**sale_record**
+
+| 컬럼 | 타입 | 제약 |
+| --- | --- | --- |
+| `id` | VARCHAR(50) | PK (클라이언트 지정) |
+| `course_id` | VARCHAR(50) | FK → course, NOT NULL |
+| `student_id` | VARCHAR(50) | NOT NULL (논리적 참조) |
+| `amount` | BIGINT | NOT NULL (결제 금액, 원) |
+| `paid_at` | TIMESTAMPTZ | NOT NULL (결제 일시) |
+| `created_at` | TIMESTAMPTZ | NOT NULL |
+
+**cancel_record**
+
+| 컬럼 | 타입 | 제약 |
+| --- | --- | --- |
+| `id` | VARCHAR(50) | PK |
+| `sale_id` | VARCHAR(50) | FK → sale_record, NOT NULL |
+| `refund_amount` | BIGINT | NOT NULL (환불 금액) |
+| `canceled_at` | TIMESTAMPTZ | NOT NULL (취소 일시) |
+| `created_at` | TIMESTAMPTZ | NOT NULL |
+
+**settlement** (정산 스냅샷)
+
+| 컬럼 | 타입 | 제약 |
+| --- | --- | --- |
+| `id` | BIGSERIAL | PK (자동 증가) |
+| `creator_id` | VARCHAR(50) | FK → creator, NOT NULL |
+| `settlement_month` | VARCHAR(7) | NOT NULL (`"2025-03"`) |
+| `total_sales_amount` | BIGINT | NOT NULL |
+| `total_refund_amount` | BIGINT | NOT NULL |
+| `net_sales_amount` | BIGINT | NOT NULL |
+| `commission_amount` | BIGINT | NOT NULL |
+| `payout_amount` | BIGINT | NOT NULL |
+| `sales_count` | INTEGER | NOT NULL |
+| `cancel_count` | INTEGER | NOT NULL |
+| `commission_rate` | NUMERIC(5,4) | NOT NULL (예: 0.2000) |
+| `status` | VARCHAR(20) | NOT NULL (PENDING/CONFIRMED/PAID) |
+| `confirmed_at` | TIMESTAMPTZ | NULL |
+| `paid_at` | TIMESTAMPTZ | NULL |
+| `created_at` | TIMESTAMPTZ | NOT NULL |
+| `updated_at` | TIMESTAMPTZ | NOT NULL |
+
+### 인덱스 · 제약
+
+| 테이블 | 인덱스/제약 | 용도 |
+| --- | --- | --- |
+| `course` | `idx_course_creator_id (creator_id)` | 크리에이터별 강의 조회 |
+| `sale_record` | `idx_sale_paid_at (paid_at)` | 기간(운영자 집계) 조회 |
+| `sale_record` | `idx_sale_course_paid_at (course_id, paid_at)` | 크리에이터 월별 조회(join + 범위) |
+| `cancel_record` | `idx_cancel_canceled_at (canceled_at)` | 기간 취소 조회 |
+| `cancel_record` | `idx_cancel_sale_canceled_at (sale_id, canceled_at)` | 환불 누적 검증 + 월별 취소 |
+| `settlement` | `uk_settlement_creator_month (creator_id, settlement_month)` UNIQUE | 동일 월 중복 정산 방지 |
+| `settlement` | `idx_settlement_status (status)` | 상태별 정산 조회 |
+
+### 설계 메모
+
+- **`student_id`는 FK 미적용**: 판매 시점 식별자만 보관하면 되어 강한 외래키 대신 문자열 컬럼으로 둠(소프트 참조).
+- **`Settlement`은 스냅샷**: 확정 시점 금액을 컬럼에 박제 → 이후 환불이 추가돼도 확정 정산 값은 불변.
+- **월별 조회 성능**: 확정(CONFIRMED)·지급(PAID)된 달은 재계산 없이 스냅샷을 반환(read-through), 미확정 달만 실시간 계산. 위 복합 인덱스로 조회 패턴(course+paidAt, sale+canceledAt) 최적화.
+- **수수료율 보관**: `commission_rate`를 정산 행에 함께 저장 → 율이 바뀌어도 과거 정산은 당시 율 기준임을 추적 가능.
+- 정산 계산(`SettlementCalculator`)은 DB·프레임워크 의존 없는 **순수 함수**로 분리해 단위 테스트 용이.
 
 ---
 
