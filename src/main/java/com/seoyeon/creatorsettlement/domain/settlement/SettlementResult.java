@@ -1,4 +1,4 @@
-package com.seoyeon.creatorsettlement.service.settlement;
+package com.seoyeon.creatorsettlement.domain.settlement;
 
 import java.math.BigDecimal;
 
