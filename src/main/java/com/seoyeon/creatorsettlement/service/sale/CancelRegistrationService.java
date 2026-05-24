@@ -21,7 +21,8 @@ public class CancelRegistrationService {
 
     @Transactional
     public CancelRecord register(String saleId, CancelRegisterRequest req) {
-        SaleRecord sale = saleRepo.findById(saleId)
+        // 판매 행에 쓰기 잠금 → 같은 판매에 대한 동시 환불을 직렬화(환불 누적 검증 보호)
+        SaleRecord sale = saleRepo.findByIdForUpdate(saleId)
                 .orElseThrow(() -> BusinessException.notFound(
                         "존재하지 않는 판매입니다: " + saleId));
 
