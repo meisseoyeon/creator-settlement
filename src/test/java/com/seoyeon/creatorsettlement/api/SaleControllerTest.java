@@ -1,11 +1,13 @@
 package com.seoyeon.creatorsettlement.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.seoyeon.creatorsettlement.support.MockMvcAuthConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(MockMvcAuthConfig.class)   // 기본 관리자 인증 헤더 주입
 @Transactional   // 각 테스트 종료 시 자동 롤백 → 시드 데이터 보존
 class SaleControllerTest {
 
