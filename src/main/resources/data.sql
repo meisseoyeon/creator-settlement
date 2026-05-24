@@ -43,4 +43,24 @@ INSERT INTO cancel_record (id, sale_id, refund_amount, canceled_at, created_at) 
                                                                                     ('cancel-2', 'sale-4', 30000, '2025-03-28T15:00:00+09:00', now()),
                                                                                     ('cancel-3', 'sale-5', 60000, '2025-02-02T09:00:00+09:00', now());
 
+-- ===== 추가 검증용 데이터 (creator-4) — 기존 시드에 없던 케이스 =====
+-- creator-4 / course-5 신규
+INSERT INTO creator (id, name, created_at) VALUES ('creator-4', '최강사', now());
+INSERT INTO course (id, creator_id, title, created_at) VALUES
+    ('course-5', 'creator-4', 'DB 인덱스 심화', now());
+
+-- 2025-04: (a) 한 판매(sale-8)에 다회 부분 환불, (b) 순 83,333 → 수수료 16,666(소수점 버림 발생)
+-- 2025-05: 같은 달 결제+전액환불로 순 판매 정확히 0 (빈 월과 구분)
+INSERT INTO sale_record (id, course_id, student_id, amount, paid_at, created_at) VALUES
+    ('sale-8',  'course-5', 'student-1', 100000, '2025-04-05T10:00:00+09:00', now()),
+    ('sale-9',  'course-5', 'student-2',  33333, '2025-04-20T10:00:00+09:00', now()),
+    ('sale-10', 'course-5', 'student-3',  40000, '2025-05-03T10:00:00+09:00', now());
+
+INSERT INTO cancel_record (id, sale_id, refund_amount, canceled_at, created_at) VALUES
+    -- sale-8 다회 부분 환불 (누적 50,000 < 원결제 100,000)
+    ('cancel-4', 'sale-8',  20000, '2025-04-10T10:00:00+09:00', now()),
+    ('cancel-5', 'sale-8',  30000, '2025-04-15T10:00:00+09:00', now()),
+    -- sale-10 전액 환불 (같은 5월) → 순 판매 0
+    ('cancel-6', 'sale-10', 40000, '2025-05-09T10:00:00+09:00', now());
+
 
