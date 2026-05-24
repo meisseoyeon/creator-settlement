@@ -1,6 +1,7 @@
 package com.seoyeon.creatorsettlement.service.settlement;
 import com.seoyeon.creatorsettlement.domain.sale.CancelRecord;
 import com.seoyeon.creatorsettlement.domain.sale.SaleRecord;
+import com.seoyeon.creatorsettlement.domain.settlement.SettlementResult;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
