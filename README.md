@@ -20,6 +20,31 @@
 - **수수료율**은 고정 20%이며 `application.yaml`의 `settlement.commission-rate`로 분리해 변경 가능성을 반영(`CommissionPolicy`).
 - **정산 상태**: `PENDING → CONFIRMED → PAID` 단방향 전이. 동일 (크리에이터, 월) 정산은 중복 생성 불가(409).
 
+## 인증/인가
+
+과제 가이드대로 **헤더 기반의 간략한 인증/인가**를 적용했습니다. 모든 `/api/**` 요청에 아래 헤더가 필요합니다.
+
+| 헤더 | 설명 | 예 |
+| --- | --- | --- |
+| `X-User-Id` | 호출자 식별자 | `creator-1`, `admin-1` |
+| `X-User-Role` | 역할 (`CREATOR` / `ADMIN`) | `ADMIN` |
+
+**인가 규칙** (`AuthInterceptor`)
+
+| 대상 | 허용 |
+| --- | --- |
+| `GET /api/creators/{creatorId}/**` (판매·정산 조회) | 본인(`X-User-Id == creatorId`) 또는 `ADMIN` |
+| `POST /api/creators/{creatorId}/settlements` (정산 생성) | `ADMIN` |
+| `/api/settlements/**` (정산 확정·지급·조회) | `ADMIN` |
+| `/api/admin/**` (운영자 집계) | `ADMIN` |
+| `/api/sales/**` (판매·취소 등록) | `ADMIN` (시스템/운영 작업) |
+
+- 헤더 누락 또는 알 수 없는 역할 → **401**, 권한 부족 → **403**.
+- 예: `curl -H 'X-User-Id: admin-1' -H 'X-User-Role: ADMIN' ...`
+- 실제 서비스에서 JWT/세션 + Spring Security로 대체할 지점을 인터셉터 한 곳(`AuthInterceptor`)으로 격리했습니다.
+
+> 아래 API 예시는 가독성을 위해 인증 헤더 표기를 생략했습니다. 실제 호출 시 위 두 헤더를 포함하세요.
+
 ## 실행 방법
 
 ```bash
@@ -156,6 +181,8 @@ curl 'http://localhost:8080/api/admin/settlements?from=2025-03-01&to=2025-03-31'
 | 상황 | 상태 코드 |
 | --- | --- |
 | 필수 필드 누락/형식 오류, 잘못된 연월·날짜, from > to | 400 |
+| 인증 헤더 누락/알 수 없는 역할 | 401 |
+| 권한 부족(본인 외 데이터·관리자 전용) | 403 |
 | 존재하지 않는 크리에이터/강의/판매/정산 | 404 |
 | 중복 ID, 환불 누적 초과, 중복 정산, 잘못된 상태 전이 | 409 |
 
