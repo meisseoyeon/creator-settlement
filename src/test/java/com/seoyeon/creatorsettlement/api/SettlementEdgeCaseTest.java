@@ -76,6 +76,50 @@ class SettlementEdgeCaseTest {
     }
 
     @Test
+    @DisplayName("[추가시드] creator-4 2025-04: 한 판매 다회 환불 + 수수료 버림 → 순 83,333 / 수수료 16,666(버림) / 정산 66,667")
+    void seed_creator4_april_multiCancelAndRounding() throws Exception {
+        // sale-8(100,000)+sale-9(33,333)=133,333, cancel-4+5=50,000 → net 83,333
+        // 83,333 * 0.2 = 16,666.6 → DOWN → 16,666, payout 66,667
+        mvc.perform(get("/api/creators/creator-4/settlements").param("month", "2025-04"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalSalesAmount").value(133333))
+                .andExpect(jsonPath("$.totalRefundAmount").value(50000))
+                .andExpect(jsonPath("$.netSalesAmount").value(83333))
+                .andExpect(jsonPath("$.commissionAmount").value(16666))   // 소수점 버림
+                .andExpect(jsonPath("$.payoutAmount").value(66667))
+                .andExpect(jsonPath("$.salesCount").value(2))
+                .andExpect(jsonPath("$.cancelCount").value(2));
+    }
+
+    @Test
+    @DisplayName("[추가시드] 동일 판매(sale-8) 다회 부분 환불: 누적 50,000 / 취소 2건이 판매 내역에 반영")
+    void seed_sale8_multipleCancels() throws Exception {
+        // 2025-04 판매는 paidAt 오름차순: [sale-8(04-05), sale-9(04-20)]
+        mvc.perform(get("/api/creators/creator-4/sales")
+                        .param("from", "2025-04-01")
+                        .param("to", "2025-04-30"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value("sale-8"))
+                .andExpect(jsonPath("$[0].amount").value(100000))
+                .andExpect(jsonPath("$[0].totalRefundedAmount").value(50000))
+                .andExpect(jsonPath("$[0].cancelCount").value(2));
+    }
+
+    @Test
+    @DisplayName("[추가시드] creator-4 2025-05: 같은 달 결제+전액환불 → 순 판매 0 / 정산 0 (빈 월과 구분)")
+    void seed_creator4_may_netZero() throws Exception {
+        mvc.perform(get("/api/creators/creator-4/settlements").param("month", "2025-05"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalSalesAmount").value(40000))   // 판매·취소는 존재
+                .andExpect(jsonPath("$.totalRefundAmount").value(40000))
+                .andExpect(jsonPath("$.netSalesAmount").value(0))
+                .andExpect(jsonPath("$.commissionAmount").value(0))
+                .andExpect(jsonPath("$.payoutAmount").value(0))
+                .andExpect(jsonPath("$.salesCount").value(1))
+                .andExpect(jsonPath("$.cancelCount").value(1));
+    }
+
+    @Test
     @DisplayName("운영자 집계 2025-02: 음수 정산(creator-2 -60,000)과 양수 정산(creator-3 +96,000)이 합산되어 36,000")
     void adminAggregate_february_mixesNegativeAndPositive() throws Exception {
         // creator-2: 2월 판매 0 / cancel-3 환불 60,000 → 순 -60,000 / payout -60,000
