@@ -191,6 +191,7 @@ curl 'http://localhost:8080/api/admin/settlements?from=2025-03-01&to=2025-03-31'
 ## 데이터 모델 (DB 스키마 / ERD)
 
 ### 관계도
+<img width="1632" height="982" alt="image" src="https://github.com/user-attachments/assets/b3e3807c-ca8c-42b7-b635-24ecad186984" />
 
 ```
 creator ─┬─< course ─< sale_record ─< cancel_record
