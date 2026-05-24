@@ -1,0 +1,95 @@
+package com.seoyeon.creatorsettlement.api;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+/**
+ * 과제 기본 시나리오 외에 직접 추가한 보강 검증.
+ * - 동일 판매 다회 부분 환불 + 누적 경계
+ * - 미래 월 조회 일관성
+ * - 운영자 집계의 음수/양수 정산 합산
+ * (왜 추가했는지는 README "추가 검증 시나리오" 참고)
+ */
+@SpringBootTest
+@AutoConfigureMockMvc
+@Transactional
+class SettlementEdgeCaseTest {
+
+    @Autowired MockMvc mvc;
+
+    private void registerCancel(String saleId, String id, long amount, String canceledAt) throws Exception {
+        mvc.perform(post("/api/sales/" + saleId + "/cancels")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            { "id": "%s", "refundAmount": %d, "canceledAt": "%s" }
+                            """.formatted(id, amount, canceledAt)))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    @DisplayName("동일 판매 다회 부분 환불: 누적이 원결제와 같으면 허용, 1원이라도 초과하면 400")
+    void multiplePartialRefunds_cumulativeBoundary() throws Exception {
+        // sale-1: 원결제 50,000, 기존 취소 없음
+        registerCancel("sale-1", "extra-cancel-1", 20000, "2025-03-06T10:00:00+09:00");
+        registerCancel("sale-1", "extra-cancel-2", 30000, "2025-03-07T10:00:00+09:00"); // 누적 50,000 == 원결제 → 허용
+
+        // 1원만 더해도 누적 초과 → 400
+        mvc.perform(post("/api/sales/sale-1/cancels")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            { "id": "extra-cancel-3", "refundAmount": 1, "canceledAt": "2025-03-08T10:00:00+09:00" }
+                            """))
+                .andExpect(status().isBadRequest());
+
+        // 정산 반영: creator-1 2025-03 환불 = 110,000(기존) + 50,000(신규) = 160,000
+        //   판매 260,000 → 순 100,000 / 수수료 20,000 / 정산 80,000 / 취소 4건
+        mvc.perform(get("/api/creators/creator-1/settlements").param("month", "2025-03"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalRefundAmount").value(160000))
+                .andExpect(jsonPath("$.netSalesAmount").value(100000))
+                .andExpect(jsonPath("$.commissionAmount").value(20000))
+                .andExpect(jsonPath("$.payoutAmount").value(80000))
+                .andExpect(jsonPath("$.cancelCount").value(4));
+    }
+
+    @Test
+    @DisplayName("미래 월 조회: 데이터 없는 먼 미래 월도 빈 월과 동일하게 0원 응답")
+    void futureMonth_returnsZero() throws Exception {
+        mvc.perform(get("/api/creators/creator-1/settlements").param("month", "2099-12"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalSalesAmount").value(0))
+                .andExpect(jsonPath("$.totalRefundAmount").value(0))
+                .andExpect(jsonPath("$.payoutAmount").value(0))
+                .andExpect(jsonPath("$.salesCount").value(0))
+                .andExpect(jsonPath("$.cancelCount").value(0));
+    }
+
+    @Test
+    @DisplayName("운영자 집계 2025-02: 음수 정산(creator-2 -60,000)과 양수 정산(creator-3 +96,000)이 합산되어 36,000")
+    void adminAggregate_february_mixesNegativeAndPositive() throws Exception {
+        // creator-2: 2월 판매 0 / cancel-3 환불 60,000 → 순 -60,000 / payout -60,000
+        // creator-3: 2월 sale-7 120,000 / 환불 0 → 순 120,000 / 수수료 24,000 / payout 96,000
+        mvc.perform(get("/api/admin/settlements")
+                        .param("from", "2025-02-01")
+                        .param("to", "2025-02-28"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.creators.length()").value(2))
+                .andExpect(jsonPath("$.creators[0].creatorId").value("creator-2"))
+                .andExpect(jsonPath("$.creators[0].payoutAmount").value(-60000))
+                .andExpect(jsonPath("$.creators[1].creatorId").value("creator-3"))
+                .andExpect(jsonPath("$.creators[1].payoutAmount").value(96000))
+                .andExpect(jsonPath("$.total.creatorCount").value(2))
+                .andExpect(jsonPath("$.total.payoutAmount").value(36000));
+    }
+}
