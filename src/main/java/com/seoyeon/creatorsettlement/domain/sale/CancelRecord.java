@@ -9,7 +9,8 @@ import java.time.OffsetDateTime;
 @Table(name = "cancel_record",
         indexes = {
                 @Index(name = "idx_cancel_canceled_at", columnList = "canceled_at"),
-                @Index(name = "idx_cancel_sale_id", columnList = "sale_id")
+                // 판매별 환불 누적 검증 + 월별 취소 범위 조회 → 복합 인덱스
+                @Index(name = "idx_cancel_sale_canceled_at", columnList = "sale_id, canceled_at")
         })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

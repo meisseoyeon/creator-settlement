@@ -13,7 +13,8 @@ import java.util.List;
 @Table(name = "sale_record",
         indexes = {
                 @Index(name = "idx_sale_paid_at", columnList = "paid_at"),
-                @Index(name = "idx_sale_course_id", columnList = "course_id")
+                // 크리에이터 월별 조회: course 로 join 후 paid_at 범위 스캔 → 복합 인덱스
+                @Index(name = "idx_sale_course_paid_at", columnList = "course_id, paid_at")
         })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
