@@ -30,6 +30,10 @@ spring:
 server:
   port: 8080
 
+settlement:
+  # 플랫폼 수수료율 (0.20 = 20%). 변경 가능성을 고려해 설정값으로 분리.
+  commission-rate: 0.20
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
